@@ -45,7 +45,6 @@ public:
     void printSummary() const;
     void reportNet() const;
     void reportCell() const;
-    void reportBList();
     void writeResult(fstream& outFile);
 
 private:
@@ -92,7 +91,6 @@ private:
     void countCutSize();
     void countMaxPinNum();
     void reBalance();
-    void storeBestState();
     void recover2Best();
     bool checkBalance();
 

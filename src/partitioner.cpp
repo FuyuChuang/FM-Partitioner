@@ -118,23 +118,6 @@ void Partitioner::reportCell() const
     return;
 }
 
-void Partitioner::reportBList()
-{
-    for (size_t i = 0; i < 2; ++i) {
-        cout << "================ BList " << ((i == 0)? "A": "B") << "================" << endl;
-        for (int j = _maxPinNum; j >= -_maxPinNum; --j) {
-            cout << setw(4) << "[" << j << "] ";
-            Node* node = _bList[i][j]->getNext();
-            while (node != NULL) {
-                cout << setw(8) << _cellArray[node->getId()]->getName() << " -> ";
-                node = node->getNext();
-            }
-            cout << endl;
-        }
-    }
-    return;
-}
-
 void Partitioner::writeResult(fstream& outFile)
 {
     stringstream buff;
@@ -192,7 +175,7 @@ void Partitioner::genInitPartition()
             _netArray[netList[j]]->incPartCount(part);
     }
 
-    // Make sure the initial partiiton is balanced
+    // Make sure the initial partition is balanced
     while (!this->checkBalance()) {
         this->reBalance();
     }
@@ -250,16 +233,18 @@ void Partitioner::FMAlgorithm()
     if (_maxAccGain > 0) {
         ++_iterNum;
 
+        this->countCutSize();
         this->recover2Best();
         cout << endl;
         cout << "------------------------------------------" << endl;
         cout << " Pass #" << _iterNum << endl;
-        cout << " Gain: " << _maxAccGain << endl;
+        cout << " Cutsize: " << setw(6) << _cutSize << endl;
+        cout << " Gain: " << setw(9) << _maxAccGain << endl;
         cout << "------------------------------------------" << endl;
 
         this->FMAlgorithm();
+        this->countCutSize();
     }
-    this->countCutSize();
     return;
 }
 
@@ -285,7 +270,7 @@ void Partitioner::removeCell(Cell* c)
     return;
 }
 
-// called when gain is updated
+// called when gain of a cell is updated
 void Partitioner::moveCell(Cell* c)
 {
     removeCell(c);
@@ -390,7 +375,8 @@ void Partitioner::updateGain(Cell* c)
     --_partSize[fPart];
     --_unlockNum[fPart];
     if (_accGain > _maxAccGain) {
-        this->storeBestState();
+        _maxAccGain = _accGain;
+        _bestMoveNum = _moveNum;
     }
     return;
 }
@@ -426,7 +412,7 @@ void Partitioner::initPass()
 void Partitioner::countCutSize()
 {
     _cutSize = 0;
-    for (size_t i = 0, end_i = _netArray.size(); i < end_i; ++i) {
+    for (size_t i = 0, end = _netArray.size(); i < end; ++i) {
         if (_netArray[i]->getPartCount(0) && _netArray[i]->getPartCount(1)) {
             ++_cutSize;
         }
@@ -478,13 +464,6 @@ bool Partitioner::checkBalance()
         balanced = false;
     }
     return balanced;
-}
-
-void Partitioner::storeBestState()
-{
-    _maxAccGain = _accGain;
-    _bestMoveNum = _moveNum;
-    return;
 }
 
 void Partitioner::recover2Best()

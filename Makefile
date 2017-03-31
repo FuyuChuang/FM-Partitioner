@@ -1,9 +1,9 @@
 CC=g++
 LDFLAGS=-std=c++11 -O3 -lm
-SOURCES=partitioner.cpp main.cpp
+SOURCES=src/partitioner.cpp src/main.cpp
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=FM_Partitioner
-INCLUDES=cell.h net.h partitioner.h
+INCLUDES=src/cell.h src/net.h src/partitioner.h
 
 all: $(SOURCES) $(EXECUTABLE)
 
