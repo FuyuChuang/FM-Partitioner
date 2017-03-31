@@ -2,17 +2,15 @@
   FileName  [ partitioner.cpp ]
   Synopsis  [ Implementation of the F-M two way partitioner. ]
   Author    [ Fu-Yu Chuang ]
-  Date      [ 2017.3.29 ]
+  Date      [ 2017.3.30 ]
 ****************************************************************************/
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <cassert>
-#include <string>
 #include <vector>
-#include <functional>
 #include <cmath>
-#include <list>
 #include <map>
 #include "cell.h"
 #include "net.h"
@@ -96,10 +94,10 @@ void Partitioner::reportNet() const
 {
     cout << "Number of nets: " << _netNum << endl;
     for (size_t i = 0, end_i = _netArray.size(); i < end_i; ++i) {
-        cout << _netArray[i]->getName() << ": ";
+        cout << setw(8) << _netArray[i]->getName() << ": ";
         vector<int> cellList = _netArray[i]->getCellList();
         for (size_t j = 0, end_j = cellList.size(); j < end_j; ++j) {
-            cout << _cellArray[cellList[j]]->getName() << " ";
+            cout << setw(8) << _cellArray[cellList[j]]->getName() << " ";
         }
         cout << endl;
     }
@@ -109,11 +107,11 @@ void Partitioner::reportNet() const
 void Partitioner::reportCell() const
 {
     cout << "Number of cells: " << _cellNum << endl;
-    for (size_t i = 0, endi = _cellArray.size(); i < endi; ++i) {
-        cout << _cellArray[i]->getName() << ": ";
+    for (size_t i = 0, end_i = _cellArray.size(); i < end_i; ++i) {
+        cout << setw(8) << _cellArray[i]->getName() << ": ";
         vector<int> netList = _cellArray[i]->getNetList();
-        for (size_t j = 0, endj = netList.size(); j < endj; ++j) {
-            cout << _netArray[netList[j]]->getName() << " ";
+        for (size_t j = 0, end_j = netList.size(); j < end_j; ++j) {
+            cout << setw(8) << _netArray[netList[j]]->getName() << " ";
         }
         cout << endl;
     }
@@ -125,10 +123,10 @@ void Partitioner::reportBList()
     for (size_t i = 0; i < 2; ++i) {
         cout << "================ BList " << ((i == 0)? "A": "B") << "================" << endl;
         for (int j = _maxPinNum; j >= -_maxPinNum; --j) {
-            cout << "[" << j << "] ";
+            cout << setw(4) << "[" << j << "] ";
             Node* node = _bList[i][j]->getNext();
             while (node != NULL) {
-                cout << _cellArray[node->getId()]->getName() << "->";
+                cout << setw(8) << _cellArray[node->getId()]->getName() << " -> ";
                 node = node->getNext();
             }
             cout << endl;
@@ -166,9 +164,8 @@ void Partitioner::writeResult(fstream& outFile)
 // Private member functions
 void Partitioner::genInitPartition()
 {
-    // need to implement an efficient method to generate initial partiiton
-    // this is a temporary version
     bool part = 0;
+    int count = 1, mode = 7;
     int tmpNet = _cellArray[0]->getFirstNet();
     for (size_t i = 0, end_i = _cellArray.size(); i < end_i; ++i) {
         if (_cellArray[i]->getFirstNet() == tmpNet) {
@@ -176,49 +173,30 @@ void Partitioner::genInitPartition()
             ++_partSize[part];
         }
         else {
-            part = !part;
-            tmpNet = _cellArray[i]->getFirstNet();
-            _cellArray[i]->setPart(part);
-            ++_partSize[part];
+            if (count % mode != 0) {
+                tmpNet = _cellArray[i]->getFirstNet();
+                _cellArray[i]->setPart(part);
+                ++_partSize[part];
+                ++count;
+            }
+            else {
+                part = !part;
+                tmpNet = _cellArray[i]->getFirstNet();
+                _cellArray[i]->setPart(part);
+                ++_partSize[part];
+                count = 1;
+            }
         }
         vector<int> netList = _cellArray[i]->getNetList();
         for (size_t j = 0, end_j = netList.size(); j < end_j; ++j)
             _netArray[netList[j]]->incPartCount(part);
     }
 
-    // alternate between two partitions
-    /*
-    bool part = 0;
-    for (size_t i = 0, end_i = _cellArray.size(); i < end_i; ++i) {
-        _cellArray[i]->setPart(part);
-        ++_partSize[part];
-        vector<int> netList = _cellArray[i]->getNetList();
-        for (size_t j = 0, end_j = netList.size(); j < end_j; ++j)
-            _netArray[netList[j]]->incPartCount(part);
-        part = !part;
-    }
-    */
-
-    // half-half
-    /*
-    int halfCellNum = _cellNum / 2;
-    bool part = 0;
-    for (size_t i = 0, end_i = _cellArray.size(); i < end_i; ++i) {
-        _cellArray[i]->setPart(part);
-        ++_partSize[part];
-        vector<int> netList = _cellArray[i]->getNetList();
-        for (size_t j = 0, end_j = netList.size(); j < end_j; ++j)
-            _netArray[netList[j]]->incPartCount(part);
-        if (i == halfCellNum)
-            part = !part;
-    }
-    */
-
-
     // Make sure the initial partiiton is balanced
     while (!this->checkBalance()) {
         this->reBalance();
     }
+
     this->initGain();
     this->buildBList();
     this->countCutSize();
@@ -235,44 +213,35 @@ void Partitioner::FMAlgorithm()
             Cell* max = this->findMaxGainCell(1);
             if (abs(_partSize[1] - _partSize[0] - 2) < (_bFactor * _cellNum))
                 updateGain(max);
-            else {
+            else
                 run = false;
-                // cout << "NO A and terminate." << endl;
-            }
 
         }
         else if (_unlockNum[1] == 0) {
             Cell* max = this->findMaxGainCell(0);
             if (abs(_partSize[0] - _partSize[1] - 2) < (_bFactor * _cellNum))
                 updateGain(max);
-            else {
+            else
                 run = false;
-                // cout << "NO B and terminate." << endl;
-            }
         }
         else {
             Cell* maxA = this->findMaxGainCell(0);
             Cell* maxB = this->findMaxGainCell(1);
-            // cout << maxA->getGain() << " " << maxB->getGain() << endl;
             if (maxA->getGain() >= maxB->getGain()) {
                 if (abs(_partSize[0] - _partSize[1] - 2) < (_bFactor * _cellNum))
                     updateGain(maxA);
                 else if (abs(_partSize[1] - _partSize[0] - 2) < (_bFactor * _cellNum))
                     updateGain(maxB);
-                else {
+                else
                     run = false;
-                    // cout << "Terminate1." << endl;
-                }
             }
             else {
                 if (abs(_partSize[1] - _partSize[0] - 2) < (_bFactor * _cellNum))
                     updateGain(maxB);
                 else if (abs(_partSize[0] - _partSize[1] - 2) < (_bFactor * _cellNum))
                     updateGain(maxA);
-                else {
+                else
                     run = false;
-                    // cout << "Terminate2." << endl;
-                }
             }
         }
         ++_moveNum;
@@ -281,12 +250,11 @@ void Partitioner::FMAlgorithm()
     if (_maxAccGain > 0) {
         ++_iterNum;
 
-        recover2Best();
+        this->recover2Best();
         cout << endl;
         cout << "------------------------------------------" << endl;
         cout << " Pass #" << _iterNum << endl;
-        cout << " Max gain: " << _maxAccGain << endl;
-        cout << " Sum of gain: " << _accGain << endl;
+        cout << " Gain: " << _maxAccGain << endl;
         cout << "------------------------------------------" << endl;
 
         this->FMAlgorithm();
@@ -365,14 +333,12 @@ void Partitioner::initGain()
 void Partitioner::updateGain(Cell* c)
 {
     _accGain += c->getGain();
-    //cout << "[" << _moveNum << "] " << _accGain << endl;
 
     bool fPart = c->getPart();
     bool tPart = !c->getPart();
     c->lock();
     _moveStack.push_back(c->getNode()->getId());
 
-    // net - partition count may need to be updated here!
     vector<int> netList = c->getNetList();
     for (size_t i = 0, end_i = netList.size(); i < end_i; ++i) {
         if (_netArray[netList[i]]->getPartCount(tPart) == 0) {
@@ -387,7 +353,6 @@ void Partitioner::updateGain(Cell* c)
         else if (_netArray[netList[i]]->getPartCount(tPart) == 1) {
             vector<int> cellList = _netArray[netList[i]]->getCellList();
             for (size_t j = 0, end_j = cellList.size(); j < end_j; ++j) {
-                // this operation could be optimized!
                 if (!_cellArray[cellList[j]]->getLock() &&
                     _cellArray[cellList[j]]->getPart() == tPart) {
                     _cellArray[cellList[j]]->decGain();
@@ -412,7 +377,6 @@ void Partitioner::updateGain(Cell* c)
         else if (_netArray[netList[i]]->getPartCount(fPart) == 1) {
             vector<int> cellList = _netArray[netList[i]]->getCellList();
             for (size_t j = 0, end_j = cellList.size(); j < end_j; ++j) {
-                // this operation could be optimized!
                 if (!_cellArray[cellList[j]]->getLock() &&
                     _cellArray[cellList[j]]->getPart() == fPart) {
                     _cellArray[cellList[j]]->incGain();
@@ -437,9 +401,6 @@ Cell* Partitioner::findMaxGainCell(bool part)
     while (maxGain >= -_maxPinNum && _bList[part][maxGain]->getNext() == NULL) {
         --maxGain;
     }
-    // Cause seg fault!!!!!!!
-    // cout << _partSize[0] << " " << _partSize[1] << endl;
-    // cout << _unlockNum[0] << " " << _unlockNum[1] << endl;
     Cell* maxGainCell = _cellArray[_bList[part][maxGain]->getNext()->getId()];
 
     return maxGainCell;
@@ -451,6 +412,7 @@ void Partitioner::initPass()
         _cellArray[i]->unlock();
         _cellArray[i]->setGain(0);
     }
+
     this->initGain();
     this->buildBList();
     _accGain = 0;
@@ -488,12 +450,17 @@ void Partitioner::reBalance()
     cout << "Re-balancing the initial partition..." << endl;
     int diff = abs(_partSize[0]-_partSize[1]);
     bool biggerPart = (_partSize[0] > _partSize[1])? 0: 1;
-    for (size_t i = 0, end = _cellArray.size(); i < end; ++i) {
+    for (size_t i = 0, end_i = _cellArray.size(); i < end_i; ++i) {
         if (_cellArray[i]->getPart() == biggerPart) {
             _cellArray[i]->setPart(!biggerPart);
             diff -= 2;
             ++_partSize[!biggerPart];
             --_partSize[biggerPart];
+            vector<int> netList = _cellArray[i]->getNetList();
+            for (size_t j = 0, end_j = netList.size(); j < end_j; ++j) {
+                _netArray[netList[j]]->incPartCount(!biggerPart);
+                _netArray[netList[j]]->decPartCount(biggerPart);
+            }
             if (diff <= 0)
                 break;
         }
@@ -523,7 +490,6 @@ void Partitioner::storeBestState()
 void Partitioner::recover2Best()
 {
     _moveNum = _bestMoveNum;
-    //cout << _moveNum << " " << _accGain << endl;
     for (size_t i = _moveStack.size()-1; i > _moveNum; --i) {
         bool part = _cellArray[_moveStack[i]]->getPart();
         _cellArray[_moveStack[i]]->setPart(!part);

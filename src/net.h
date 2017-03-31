@@ -2,12 +2,11 @@
   FileName  [ net.h ]
   Synopsis  [ Define a data structure storing a net. ]
   Author    [ Fu-Yu Chuang ]
-  Date      [ 2017.3.28 ]
+  Date      [ 2017.3.29 ]
 ****************************************************************************/
 #ifndef NET_H
 #define NET_H
 
-#include <string>
 #include <vector>
 using namespace std;
 

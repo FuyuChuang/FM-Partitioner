@@ -3,16 +3,13 @@
   Synopsis  [ Define an interface which takes net description files as input
               and partition the hypergraph accordingly. ]
   Author    [ Fu-Yu Chuang ]
-  Date      [ 2017.3.29 ]
+  Date      [ 2017.3.30 ]
 ****************************************************************************/
 #ifndef PARTITIONER_H
 #define PARTITIONER_H
 
-#include <iostream>
 #include <fstream>
-#include <string>
 #include <vector>
-#include <list>
 #include <map>
 #include "cell.h"
 #include "net.h"
@@ -74,12 +71,12 @@ private:
     vector<int>         _moveStack;     // history of cell movement
 
 
-    // private member functions
-    // generate initail partition
+    // Private member functions
+    // partition algorithm
     void genInitPartition();
     void FMAlgorithm();
 
-    // move cell between bucket lists
+    // bucket list construction and modification
     void insertCell(Cell* c);
     void removeCell(Cell* c);
     void moveCell(Cell* c);
@@ -99,7 +96,7 @@ private:
     void recover2Best();
     bool checkBalance();
 
-    // clean up partitioner
+    // Clean up partitioner
     void clear();
 };
 

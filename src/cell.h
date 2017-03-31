@@ -2,12 +2,11 @@
   FileName  [ cell.h ]
   Synopsis  [ Define basic data structures storing a cell. ]
   Author    [ Fu-Yu Chuang ]
-  Date      [ 2017.3.28 ]
+  Date      [ 2017.3.29 ]
 ****************************************************************************/
 #ifndef CELL_H
 #define CELL_H
 
-#include <string>
 #include <vector>
 using namespace std;
 
@@ -16,7 +15,7 @@ class Node
     friend class Cell;
 
 public:
-    // constructor and destructor
+    // Constructor and destructor
     Node(const int& id) :
         _id(id), _prev(NULL), _next(NULL) { }
     ~Node() { }
@@ -40,7 +39,7 @@ private:
 class Cell
 {
 public:
-    // constructor and destructor
+    // Constructor and destructor
     Cell(string& name, bool part, int id) :
         _gain(0), _pinNum(0), _part(part), _lock(false), _name(name) {
         _node = new Node(id);
@@ -76,7 +75,7 @@ public:
 private:
     int             _gain;      // gain of the cell
     int             _pinNum;    // number of pins the cell are connected to
-    bool            _part;      // partition the cell belongs to
+    bool            _part;      // partition the cell belongs to (0-A, 1-B)
     bool            _lock;      // whether the cell is locked
     Node*           _node;      // node used to link the cells together
     string          _name;      // name of the cell
