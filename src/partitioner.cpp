@@ -30,14 +30,16 @@ void Partitioner::parseInput(fstream& inFile)
     // Set up whole circuit
     while (inFile >> str) {
         if (str == "NET") {
-            string netName, cellName;
+            string netName, cellName, tmpCellName = "";
             inFile >> netName;
             int netId = _netNum;
             _netArray.push_back(new Net(netName));
             _netName2Id[netName] = netId;
             while (inFile >> cellName) {
-                if (cellName == ";")
+                if (cellName == ";") {
+                    tmpCellName = "";
                     break;
+                }
                 else {
                     // a newly seen cell
                     if (_cellName2Id.count(cellName) == 0) {
@@ -48,14 +50,18 @@ void Partitioner::parseInput(fstream& inFile)
                         _cellArray[cellId]->incPinNum();
                         _netArray[netId]->addCell(cellId);
                         ++_cellNum;
+                        tmpCellName = cellName;
                     }
                     // an existed cell
                     else {
-                        assert(_cellName2Id.count(cellName) == 1);
-                        int cellId = _cellName2Id[cellName];
-                        _cellArray[cellId]->addNet(netId);
-                        _cellArray[cellId]->incPinNum();
-                        _netArray[netId]->addCell(cellId);
+                        if (cellName != tmpCellName) {
+                            assert(_cellName2Id.count(cellName) == 1);
+                            int cellId = _cellName2Id[cellName];
+                            _cellArray[cellId]->addNet(netId);
+                            _cellArray[cellId]->incPinNum();
+                            _netArray[netId]->addCell(cellId);
+                            tmpCellName = cellName;
+                        }
                     }
                 }
             }
@@ -76,11 +82,11 @@ void Partitioner::printSummary() const
 {
     cout << endl;
     cout << "==================== Summary ====================" << endl;
-    cout << "Cutsize: " << _cutSize << endl;
-    cout << "Total cell number: " << _cellNum << endl;
-    cout << "Total net number:  " << _netNum << endl;
-    cout << "Cell Number of partition A: " << _partSize[0] << endl;
-    cout << "Cell Number of partition B: " << _partSize[1] << endl;
+    cout << " Cutsize: " << _cutSize << endl;
+    cout << " Total cell number: " << _cellNum << endl;
+    cout << " Total net number:  " << _netNum << endl;
+    cout << " Cell Number of partition A: " << _partSize[0] << endl;
+    cout << " Cell Number of partition B: " << _partSize[1] << endl;
     cout << "=================================================" << endl;
     cout << endl;
     return;
@@ -180,6 +186,35 @@ void Partitioner::genInitPartition()
             _netArray[netList[j]]->incPartCount(part);
     }
 
+    // alternate between two partitions
+    /*
+    bool part = 0;
+    for (size_t i = 0, end_i = _cellArray.size(); i < end_i; ++i) {
+        _cellArray[i]->setPart(part);
+        ++_partSize[part];
+        vector<int> netList = _cellArray[i]->getNetList();
+        for (size_t j = 0, end_j = netList.size(); j < end_j; ++j)
+            _netArray[netList[j]]->incPartCount(part);
+        part = !part;
+    }
+    */
+
+    // half-half
+    /*
+    int halfCellNum = _cellNum / 2;
+    bool part = 0;
+    for (size_t i = 0, end_i = _cellArray.size(); i < end_i; ++i) {
+        _cellArray[i]->setPart(part);
+        ++_partSize[part];
+        vector<int> netList = _cellArray[i]->getNetList();
+        for (size_t j = 0, end_j = netList.size(); j < end_j; ++j)
+            _netArray[netList[j]]->incPartCount(part);
+        if (i == halfCellNum)
+            part = !part;
+    }
+    */
+
+
     // Make sure the initial partiiton is balanced
     while (!this->checkBalance()) {
         this->reBalance();
@@ -247,11 +282,14 @@ void Partitioner::FMAlgorithm()
         ++_iterNum;
 
         recover2Best();
-        cout << "Pass #" << _iterNum << endl;
-        cout << "Max gain: " << _maxAccGain << endl;
-        cout << "Sum of gain: " << _accGain << endl;
+        cout << endl;
+        cout << "------------------------------------------" << endl;
+        cout << " Pass #" << _iterNum << endl;
+        cout << " Max gain: " << _maxAccGain << endl;
+        cout << " Sum of gain: " << _accGain << endl;
+        cout << "------------------------------------------" << endl;
 
-        // this->FMAlgorithm();
+        this->FMAlgorithm();
     }
     this->countCutSize();
     return;
@@ -327,7 +365,7 @@ void Partitioner::initGain()
 void Partitioner::updateGain(Cell* c)
 {
     _accGain += c->getGain();
-    cout << "[" << _moveNum << "] " << _accGain << endl;
+    //cout << "[" << _moveNum << "] " << _accGain << endl;
 
     bool fPart = c->getPart();
     bool tPart = !c->getPart();

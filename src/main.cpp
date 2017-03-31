@@ -35,8 +35,8 @@ int main(int argc, char** argv)
     }
 
     Partitioner* partitioner = new Partitioner(input);
-    //partitioner->partition();
-    partitioner->reportNet();
+    partitioner->partition();
+    //partitioner->reportNet();
     partitioner->printSummary();
     partitioner->writeResult(output);
 
